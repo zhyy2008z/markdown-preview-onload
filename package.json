@@ -1,23 +1,25 @@
 {
   "name": "markdown-preview-onload",
   "displayName": "markdown-preview-onload",
-  "description": "在 vscode onload后，立刻使所有处于打开状态的markdown文件变为preview模式",
+  "description": "在 vscode startup 后，立刻使所有处于打开状态的markdown文件变为preview模式。该扩展用来解决 *.md 的打开方式设置为 vscode.markdown.preview.editor 后，直接打开 markdown 文件时，打开方式未生效的问题。",
   "version": "0.0.1",
+  "publisher": "zhyy2008z",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhyy2008z/markdown-preview-onload"
+  },
   "engines": {
     "vscode": "^1.118.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "markdown-preview-onload.helloWorld",
-        "title": "Hello World"
-      }
-    ]
+    "commands": []
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
