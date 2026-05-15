@@ -6,37 +6,46 @@ const PREVIEW_EDITOR_ID = "vscode.markdown.preview.editor";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-	let editModeFiles = new Set(
-		context.workspaceState.get<string[]>("editModeFiles", [])
-	);
+export async function activate(context: vscode.ExtensionContext) {
 
-	const currentEditor = vscode.window.activeTextEditor;
-	if (currentEditor) {
-		autoPreview(currentEditor, editModeFiles);
+	// 1. 获取启动时所有需要处理的 Markdown 文件的 URI 列表
+	// 使用 fsPath 作为唯一键，避免使用不稳定的 Tab 对象
+	const markdownUris = vscode.window.tabGroups.all
+		.flatMap(g => g.tabs)
+		.filter(tab =>
+			tab.input instanceof vscode.TabInputText &&
+			tab.input.uri.fsPath.toLowerCase().endsWith('.md')
+		)
+		.map(tab => (tab.input as vscode.TabInputText).uri);
+
+	if (markdownUris.length === 0) { return; } //如果没有处于编辑状态的markdown文件，直接返回
+
+	const originalActiveUri = (vscode.window.tabGroups.activeTabGroup.activeTab?.input as any)?.uri; //记录当前焦点，因为后面我们要操作tab
+
+	// 逐个处理 URI
+	for (const uri of markdownUris) {
+		// 每次操作前，必须实时重新计算当前的 tab 状态，因为每次关闭 tab 都会导致旧的 tab 引用失效
+		const tab = findTextEditorTabForUri(uri);
+
+		if (tab) {
+			await vscode.window.tabGroups.close(tab);
+
+			await vscode.commands.executeCommand(
+				'vscode.openWith',
+				uri,
+				PREVIEW_EDITOR_ID
+			);
+		}
 	}
-}
 
-/**
- * 自动重新打开处于编辑状态的文档为预览状态
- */
-async function autoPreview(editor: vscode.TextEditor, editModeFiles: Set<string>) {
-	if (editor.document.languageId !== "markdown") { return; }
-	if (editor.document.uri.scheme !== "file") { return; }
-	if (editModeFiles.has(editor.document.uri.toString())) { return; }
-
-	const uri = editor.document.uri;
-	const viewColumn = editor.viewColumn ?? vscode.ViewColumn.Active;
-	const tab = findTextEditorTabForUri(uri);
-	if (tab) {
-		await vscode.window.tabGroups.close(tab);
+	// 恢复原始焦点
+	if (originalActiveUri) {
+		await vscode.commands.executeCommand('vscode.open', originalActiveUri, {
+			preview: true,
+			preserveFocus: false
+		});
 	}
-	await vscode.commands.executeCommand(
-		"vscode.openWith",
-		uri,
-		PREVIEW_EDITOR_ID,
-		viewColumn
-	);
+
 }
 
 /**
